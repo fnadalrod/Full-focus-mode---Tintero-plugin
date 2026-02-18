@@ -23,7 +23,7 @@ export function WritingCanvas({ writingState }: WritingCanvasProps) {
                                 filter: `blur(${(visibleItems.length - i) * 2}px)`,
                                 y: 0
                             }}
-                            className="text-2xl text-center w-full max-w-2xl px-8"
+                            className="text-lg md:text-2xl text-center w-full max-w-2xl px-4 md:px-8"
                             style={{
                                 color: 'var(--text-muted)'
                             }}
@@ -35,8 +35,8 @@ export function WritingCanvas({ writingState }: WritingCanvasProps) {
             </div>
 
             {/* Active Line (Focused) */}
-            <div className="relative z-10 w-full text-center px-8">
-                <span className="text-4xl leading-relaxed text-[var(--text-main)] whitespace-pre-wrap">
+            <div className="relative z-10 w-full text-center px-4 md:px-8">
+                <span className="text-2xl md:text-4xl leading-relaxed text-[var(--text-main)] whitespace-pre-wrap">
                     {writingState.currentLine}
                     {/* Custom Cursor */}
                     <motion.span

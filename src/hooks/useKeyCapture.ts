@@ -1,4 +1,4 @@
-import { useEffect, useCallback, useState } from 'react';
+import { useEffect, useCallback, useState, useRef } from 'react';
 import type { WritingState } from '../engine/stats';
 
 interface KeyCaptureProps {
@@ -21,6 +21,7 @@ const initialState: WritingState = {
 
 export function useKeyCapture({ isActive, backspaceMode, onUpdate, onActivity }: KeyCaptureProps) {
     const [state, setState] = useState<WritingState>(initialState);
+    const textareaRef = useRef<HTMLTextAreaElement>(null);
 
     useEffect(() => {
         if (isActive) {
@@ -29,131 +30,137 @@ export function useKeyCapture({ isActive, backspaceMode, onUpdate, onActivity }:
                 sessionStart: Date.now(),
                 lastKeystroke: Date.now()
             });
+
+            if (textareaRef.current) {
+                textareaRef.current.focus();
+                textareaRef.current.value = '';
+            }
         }
     }, [isActive]);
 
-    const handleKeyDown = useCallback((e: KeyboardEvent) => {
+    useEffect(() => {
         if (!isActive) return;
 
+        const interval = setInterval(() => {
+            if (textareaRef.current && document.activeElement !== textareaRef.current) {
+                textareaRef.current.focus();
+            }
+        }, 500);
+
+        return () => clearInterval(interval);
+    }, [isActive]);
+
+    const handleInput = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
+        if (!isActive) return;
         onActivity();
+
         const now = Date.now();
+        const value = e.target.value;
 
-        const blockedKeys = [
-            'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight',
-            'Home', 'End', 'PageUp', 'PageDown',
-            'Delete'
-        ];
-        if (blockedKeys.includes(e.key)) {
-            e.preventDefault();
+        const newChar = value.slice(-1);
 
+        if (!newChar) {
             return;
         }
 
-        if ((e.ctrlKey || e.metaKey) && ['a', 'c', 'v', 'x', 'z', 'y'].includes(e.key.toLowerCase())) {
-            e.preventDefault();
-            return;
-        }
+        const isSpace = newChar === ' ';
+        const isPeriod = newChar === '.';
 
         let newPauses = [...state.pauses];
+
         if (now - state.lastKeystroke > 3000) {
             newPauses.push(now);
         }
 
         setState(prev => {
-            let newState = { ...prev, lastKeystroke: now, pauses: newPauses };
+            const prevTrimmed = prev.currentLine.trimEnd();
+            const endsWithPeriod = prevTrimmed.endsWith('.');
 
-            if (e.key === 'Enter') {
-                e.preventDefault();
+            if (endsWithPeriod && !isPeriod && prev.currentLine.trim().length > 0) {
+                const newTimestamps = [now];
+
+                return {
+                    ...prev,
+                    lastKeystroke: now,
+                    pauses: newPauses,
+                    pendingSentences: [...prev.pendingSentences, prev.currentLine],
+                    currentLine: newChar,
+                    cursorPosition: 1,
+                    wordTimestamps: newTimestamps
+                };
+            }
+
+            const newLine = prev.currentLine + newChar;
+            const newTimestamps = [...prev.wordTimestamps];
+
+            if (isSpace && prev.currentLine.trim().length > 0) {
+                newTimestamps.push(now);
+            } else if (prev.currentLine.length === 0) {
+                newTimestamps.push(now);
+            }
+
+            return {
+                ...prev,
+                lastKeystroke: now,
+                pauses: newPauses,
+                currentLine: newLine,
+                cursorPosition: prev.cursorPosition + 1,
+                wordTimestamps: newTimestamps
+            };
+        });
+
+        e.target.value = '';
+    }, [isActive, state, onActivity]);
+
+    const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+        if (!isActive) {
+            return;
+        }
+
+        onActivity();
+
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            const now = Date.now();
+
+            setState(prev => {
                 const completeParagraph = [...prev.pendingSentences, prev.currentLine]
                     .filter(s => s.trim().length > 0)
                     .join(' ');
 
                 const newTimestamps = [...prev.wordTimestamps];
-
                 if (prev.currentLine.trim().length > 0) {
                     newTimestamps.push(now);
                 }
 
                 return {
-                    ...newState,
+                    ...prev,
+                    lastKeystroke: now,
                     paragraphs: completeParagraph ? [...prev.paragraphs, completeParagraph] : prev.paragraphs,
                     currentLine: '',
                     pendingSentences: [],
                     cursorPosition: 0,
                     wordTimestamps: newTimestamps
                 };
-            }
-
-            if (e.key === 'Backspace') {
-                e.preventDefault();
-
-                if (backspaceMode === 'disabled') {
-                    return newState;
-                }
-
-                if (prev.currentLine.length === 0) {
-                    return newState;
-                }
-
-                const lastChar = prev.currentLine[prev.currentLine.length - 1];
-
-                if (prev.currentLine.length > 0 && lastChar === ' ') {
-                    return newState;
-                }
-
-                return {
-                    ...newState,
-                    currentLine: prev.currentLine.slice(0, -1),
-                    cursorPosition: prev.cursorPosition - 1
-                };
-            }
-
-            if (e.key === '.') {
-                e.preventDefault();
-                const sentenceWithPeriod = prev.currentLine + '.';
-
-                if (prev.currentLine.trim().length > 0) {
-                    const newTimestamps = [...prev.wordTimestamps];
-                    newTimestamps.push(now);
-
-                    return {
-                        ...newState,
-                        pendingSentences: [...prev.pendingSentences, sentenceWithPeriod],
-                        currentLine: '',
-                        cursorPosition: 0,
-                        wordTimestamps: newTimestamps
-                    };
-                }
-                return newState;
-            }
-
-            if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
-                const newLine = prev.currentLine + e.key;
-                const newTimestamps = [...prev.wordTimestamps];
-
-                if (e.key === ' ' && prev.currentLine.trim().length > 0) {
-                    newTimestamps.push(now);
-                }
-
-                return {
-                    ...newState,
-                    currentLine: newLine,
-                    cursorPosition: prev.cursorPosition + 1,
-                    wordTimestamps: newTimestamps
-                };
-            }
-
-            return newState;
-        });
-    }, [isActive, backspaceMode, state, onActivity]);
-
-    useEffect(() => {
-        if (isActive) {
-            window.addEventListener('keydown', handleKeyDown);
-
-            return () => window.removeEventListener('keydown', handleKeyDown);
+            });
+            return;
         }
-    }, [isActive, handleKeyDown]);
+
+        if (e.key === 'Backspace') {
+            setState(prev => {
+                if (backspaceMode === 'disabled') return prev;
+                if (prev.currentLine.length === 0) return prev;
+                if (prev.currentLine.slice(-1) === ' ') return prev; // Don't delete spaces? (Orig logic)
+
+                return {
+                    ...prev,
+                    currentLine: prev.currentLine.slice(0, -1),
+                    cursorPosition: Math.max(0, prev.cursorPosition - 1)
+                };
+            });
+        }
+
+    }, [isActive, backspaceMode, onActivity]);
 
     useEffect(() => {
         if (isActive) {
@@ -161,5 +168,22 @@ export function useKeyCapture({ isActive, backspaceMode, onUpdate, onActivity }:
         }
     }, [state, isActive, onUpdate]);
 
-    return state;
+    return {
+        state,
+        inputProps: {
+            ref: textareaRef,
+            onChange: handleInput,
+            onKeyDown: handleKeyDown,
+            style: {
+                position: 'absolute' as const,
+                opacity: 0,
+                top: 0,
+                left: 0,
+                height: '100%',
+                width: '100%',
+                zIndex: 10,
+                cursor: 'text'
+            }
+        }
+    };
 }

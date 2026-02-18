@@ -21,12 +21,24 @@ export function Writing({ session, onEnd }: WritingProps) {
     const [elapsedTime, setElapsedTime] = useState(0);
     const [isFinished, setIsFinished] = useState(false);
 
-    const state = useKeyCapture({
+    const { state, inputProps } = useKeyCapture({
         isActive: !isFinished,
         backspaceMode: 'disabled',
         onUpdate: NO_OP,
         onActivity: NO_OP
     });
+
+    useEffect(() => {
+        const handleDocKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') {
+                finishSprintRef.current();
+            }
+        };
+        document.addEventListener('keydown', handleDocKeyDown);
+
+        return () => document.removeEventListener('keydown', handleDocKeyDown);
+    }, []);
+
 
     useEffect(() => {
         let interval: ReturnType<typeof setInterval>;
@@ -89,24 +101,15 @@ export function Writing({ session, onEnd }: WritingProps) {
         finishSprintRef.current = finishSprint;
     });
 
-    useEffect(() => {
-        const handleKeyDown = (e: KeyboardEvent) => {
-            if (e.key === 'Escape') {
-                finishSprintRef.current();
-            }
-        };
-
-        window.addEventListener('keydown', handleKeyDown);
-
-        return () => window.removeEventListener('keydown', handleKeyDown);
-    }, []);
-
     const minutes = Math.max(elapsedTime / 60000, 0.1);
     const isPaused = (Date.now() - state.lastKeystroke) > 3000;
     const wpm = Math.round((state.paragraphs.length * 15 + state.currentLine.length / 5) / minutes);
 
     return (
         <div className="relative w-full h-full flex flex-col cursor-none">
+            {/* Invisible Input for Mobile Keyboard */}
+            <textarea {...inputProps} autoFocus />
+
             {/* Background */}
             {settings.showBackground && <ConstellationBackground />}
 
