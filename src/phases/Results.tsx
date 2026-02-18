@@ -43,7 +43,7 @@ export function Results({ session, stats, onDiscard, onSave }: ResultsProps) {
                     const json = await window.tintero.convert.fromHtml(htmlContent);
                     const jsonString = JSON.stringify(json);
 
-                    const newFile = await window.tintero.project.addFile({
+                    await window.tintero.project.addFile({
                         name: session.fileName,
                         content: jsonString,
                         writingMode: 'prose'
