@@ -22,6 +22,19 @@ const PHRASES = [
 export function Setup({ onStart, hasSeenIntro, onIntroComplete }: SetupProps) {
     const [selectedFile, setSelectedFile] = useState<{ id: string, name: string } | null>(null);
     const [duration, setDuration] = useState<number>(10 * 60 * 1000);
+    const [isCustomDuration, setIsCustomDuration] = useState(false);
+    const [customHours, setCustomHours] = useState("");
+    const [customMinutes, setCustomMinutes] = useState("");
+    const [customSeconds, setCustomSeconds] = useState("");
+
+    const updateCustomDuration = (h: string, m: string, s: string) => {
+        const hours = parseInt(h) || 0;
+        const minutes = parseInt(m) || 0;
+        const seconds = parseInt(s) || 0;
+        const totalMs = ((hours * 60 * 60) + (minutes * 60) + seconds) * 1000;
+        setDuration(totalMs);
+    };
+
     const { settings, updateSetting } = useSettings();
     const [currentPhraseIndex, setCurrentPhraseIndex] = useState(-1);
     const [showIntro, setShowIntro] = useState(!hasSeenIntro);
@@ -80,14 +93,7 @@ export function Setup({ onStart, hasSeenIntro, onIntroComplete }: SetupProps) {
         };
     }, []);
 
-    const durations = [
-        { label: '5m', value: 5 * 60 * 1000 },
-        { label: '10m', value: 10 * 60 * 1000 },
-        { label: '15m', value: 15 * 60 * 1000 },
-        { label: '20m', value: 20 * 60 * 1000 },
-        { label: '30m', value: 30 * 60 * 1000 },
-        { label: '∞', value: 0 },
-    ];
+
 
     const handleStart = async () => {
         if (isCreatingNew) {
@@ -113,7 +119,7 @@ export function Setup({ onStart, hasSeenIntro, onIntroComplete }: SetupProps) {
                     {currentPhraseIndex >= 0 && currentPhraseIndex < PHRASES.length && (
                         <h1
                             key={currentPhraseIndex}
-                            className="text-3xl md:text-5xl font-serif text-[var(--text-main)] tracking-wider whitespace-nowrap"
+                            className="text-3xl md:text-5xl font-serif text-[var(--text-main)] tracking-wider break-words whitespace-normal text-center px-4 leading-tight"
                         >
                             {PHRASES[currentPhraseIndex]}
                         </h1>
@@ -128,13 +134,13 @@ export function Setup({ onStart, hasSeenIntro, onIntroComplete }: SetupProps) {
 
     return (
         <div
-            className="flex flex-col items-center justify-center min-h-screen p-8 text-center max-w-2xl mx-auto relative z-10"
+            className="flex flex-col items-center justify-center min-h-screen p-4 md:p-8 text-center max-w-2xl mx-auto relative z-10"
         >
             {settings.showBackground && <ConstellationBackground />}
 
-            <h1 className="text-5xl font-serif mb-4 tracking-wide text-[var(--accent)] uppercase relative z-10 drop-shadow-lg">Full Focus Mode</h1>
+            <h1 className="text-3xl md:text-5xl font-serif mb-4 tracking-wide text-[var(--accent)] uppercase relative z-10 drop-shadow-lg">Full Focus Mode</h1>
 
-            <div className="w-full bg-[var(--bg-secondary)]/80 border border-[var(--border-dim)] rounded-none p-8 mb-8 text-left shadow-2xl backdrop-blur-md relative z-10">
+            <div className="w-full bg-[var(--bg-secondary)]/80 border border-[var(--border-dim)] rounded-none p-4 md:p-8 mb-8 text-left shadow-2xl backdrop-blur-md relative z-10">
                 {/* File Selection */}
                 <div className="mb-8 border-b border-[var(--border-dim)] pb-8">
                     <div className="flex justify-between items-center mb-4">
@@ -176,12 +182,23 @@ export function Setup({ onStart, hasSeenIntro, onIntroComplete }: SetupProps) {
                     <label className="flex items-center gap-3 text-xs text-[var(--text-dim)] mb-4 uppercase tracking-[0.2em] font-bold">
                         <Clock className="w-3 h-3" /> Duration
                     </label>
-                    <div className="grid grid-cols-6 gap-2">
-                        {durations.map(d => (
+
+                    <div className="grid grid-cols-3 md:grid-cols-4 gap-2 mb-4">
+                        {[
+                            { label: '5m', value: 5 * 60 * 1000 },
+                            { label: '10m', value: 10 * 60 * 1000 },
+                            { label: '30m', value: 30 * 60 * 1000 },
+                            { label: '1h', value: 60 * 60 * 1000 },
+                            { label: '2h', value: 120 * 60 * 1000 },
+                            { label: '∞', value: 0 },
+                        ].map(d => (
                             <button
                                 key={d.label}
-                                onClick={() => setDuration(d.value)}
-                                className={`py-3 text-xs font-mono transition-all border ${duration === d.value
+                                onClick={() => {
+                                    setDuration(d.value);
+                                    setIsCustomDuration(false);
+                                }}
+                                className={`py-3 text-xs font-mono transition-all border ${!isCustomDuration && duration === d.value
                                     ? 'bg-[var(--accent)] text-white border-[var(--accent)]'
                                     : 'bg-transparent text-[var(--text-dim)] border-[var(--border-dim)] hover:border-[var(--text-muted)] hover:text-[var(--text-main)]'
                                     }`}
@@ -189,7 +206,67 @@ export function Setup({ onStart, hasSeenIntro, onIntroComplete }: SetupProps) {
                                 {d.label}
                             </button>
                         ))}
+                        <button
+                            onClick={() => setIsCustomDuration(true)}
+                            className={`py-3 text-xs font-mono transition-all border col-span-2 md:col-span-2 ${isCustomDuration
+                                ? 'bg-[var(--accent)] text-white border-[var(--accent)]'
+                                : 'bg-transparent text-[var(--text-dim)] border-[var(--border-dim)] hover:border-[var(--text-muted)] hover:text-[var(--text-main)]'
+                                }`}
+                        >
+                            Custom
+                        </button>
                     </div>
+
+                    {isCustomDuration && (
+                        <div className="flex gap-4 justify-center items-center bg-black/20 p-4 border border-[var(--border-dim)] animate-in fade-in slide-in-from-top-2">
+                            <div className="flex flex-col items-center">
+                                <input
+                                    type="number"
+                                    min="0"
+                                    placeholder="00"
+                                    value={customHours}
+                                    onChange={(e) => {
+                                        setCustomHours(e.target.value);
+                                        updateCustomDuration(e.target.value, customMinutes, customSeconds);
+                                    }}
+                                    className="w-12 text-center bg-transparent border-b border-[var(--text-dim)] text-[var(--text-main)] focus:border-[var(--accent)] outline-none text-xl font-mono"
+                                />
+                                <span className="text-[10px] text-[var(--text-dim)] uppercase mt-1">Hrs</span>
+                            </div>
+                            <span className="text-[var(--text-dim)]">:</span>
+                            <div className="flex flex-col items-center">
+                                <input
+                                    type="number"
+                                    min="0"
+                                    max="59"
+                                    placeholder="00"
+                                    value={customMinutes}
+                                    onChange={(e) => {
+                                        setCustomMinutes(e.target.value);
+                                        updateCustomDuration(customHours, e.target.value, customSeconds);
+                                    }}
+                                    className="w-12 text-center bg-transparent border-b border-[var(--text-dim)] text-[var(--text-main)] focus:border-[var(--accent)] outline-none text-xl font-mono"
+                                />
+                                <span className="text-[10px] text-[var(--text-dim)] uppercase mt-1">Min</span>
+                            </div>
+                            <span className="text-[var(--text-dim)]">:</span>
+                            <div className="flex flex-col items-center">
+                                <input
+                                    type="number"
+                                    min="0"
+                                    max="59"
+                                    placeholder="00"
+                                    value={customSeconds}
+                                    onChange={(e) => {
+                                        setCustomSeconds(e.target.value);
+                                        updateCustomDuration(customHours, customMinutes, e.target.value);
+                                    }}
+                                    className="w-12 text-center bg-transparent border-b border-[var(--text-dim)] text-[var(--text-main)] focus:border-[var(--accent)] outline-none text-xl font-mono"
+                                />
+                                <span className="text-[10px] text-[var(--text-dim)] uppercase mt-1">Sec</span>
+                            </div>
+                        </div>
+                    )}
                 </div>
 
                 {/* Settings (Moved inside) */}

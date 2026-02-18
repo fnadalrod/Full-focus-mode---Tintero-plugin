@@ -1,5 +1,5 @@
 /**
- * Statistics calculation engine for Hemingway Sprint.
+ * Statistics calculation engine for Full Focus Sprint.
  */
 
 export interface SessionStats {

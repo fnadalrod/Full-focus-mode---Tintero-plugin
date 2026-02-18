@@ -106,7 +106,7 @@ export function Writing({ session, onEnd }: WritingProps) {
     const wpm = Math.round((state.paragraphs.length * 15 + state.currentLine.length / 5) / minutes);
 
     return (
-        <div className="relative w-full h-full flex flex-col cursor-none">
+        <div className="relative w-full h-[100dvh] flex flex-col cursor-none overflow-hidden">
             {/* Invisible Input for Mobile Keyboard */}
             <textarea {...inputProps} autoFocus />
 
