@@ -174,6 +174,10 @@ export function useKeyCapture({ isActive, backspaceMode, onUpdate, onActivity }:
             ref: textareaRef,
             onChange: handleInput,
             onKeyDown: handleKeyDown,
+            autoCapitalize: 'none',
+            autoComplete: 'off',
+            autoCorrect: 'off',
+            spellCheck: false,
             style: {
                 position: 'absolute' as const,
                 opacity: 0,
