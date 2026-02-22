@@ -24,7 +24,8 @@ export function WritingCanvas({ writingState }: WritingCanvasProps) {
             if (window.tintero && window.tintero.fs) {
                 try {
                     const platform = await window.tintero.fs.getPlatform();
-                    setIsMobile(platform === 'capacitor');
+                    const p = platform.toLowerCase();
+                    setIsMobile(p === 'android' || p === 'ios');
                 } catch (e) {
                     console.warn('Failed to get platform', e);
                 }
