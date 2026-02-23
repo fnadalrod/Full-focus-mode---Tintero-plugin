@@ -27,7 +27,7 @@ export function WritingCanvas({ writingState }: WritingCanvasProps) {
                     const p = platform.toLowerCase();
 
                     console.log('Platform detected: ' + p);
-                    setIsMobile(p.includes('android') || p.includes('ios'));
+                    setIsMobile(p.includes('android') || p.includes('ios') || p.includes('mobile'));
                 } catch (e) {
                     console.warn('Failed to get platform', e);
                 }
